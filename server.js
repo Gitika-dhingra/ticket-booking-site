@@ -7,23 +7,22 @@ app.use(express.json());
 
 /* ---------- MongoDB Atlas Connection ---------- */
 
-// Yahan local link ki jagah process.env.MONGO_URI use kiya hai
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB Atlas Connected! ✅"))
+.then(() => console.log("MongoDB Atlas Connected"))
 .catch(err => console.log("MongoDB Error:", err));
 
 const bookingSchema = new mongoose.Schema({
     seatNumber: {
         type: Number,
-        required: true,
+        required: true
     },
     user: {
         type: String,
-        required: true,
+        required: true
     },
     bookedAt: {
         type: Date,
-        default: Date.now,
+        default: Date.now
     }
 });
 
@@ -31,7 +30,6 @@ const Booking = mongoose.model("Booking", bookingSchema);
 
 /* ---------- Redis Cloud Connection ---------- */
 
-// Yahan local link ki jagah process.env.REDIS_URL use kiya hai
 const redisClient = createClient({
     url: process.env.REDIS_URL
 });
@@ -41,11 +39,17 @@ redisClient.on("error", (err) => console.log("Redis Error:", err));
 (async () => {
     try {
         await redisClient.connect();
-        console.log("Redis Cloud Connected! ✅");
+        console.log("Redis Cloud Connected");
     } catch (err) {
         console.log("Redis Connection Error:", err);
     }
 })();
+
+/* ---------- Home Route (Fix for Cannot GET /) ---------- */
+
+app.get("/", (req, res) => {
+    res.send("Concurrent Ticket Booking System API is running");
+});
 
 /* ---------- Booking API ---------- */
 
@@ -59,7 +63,7 @@ app.post("/book", async (req, res) => {
     }
 
     try {
-        // Lock seat in Redis (30 seconds)
+
         const lock = await redisClient.set(
             `seat:${seatNumber}`,
             user,
@@ -75,12 +79,11 @@ app.post("/book", async (req, res) => {
             });
         }
 
-        // Save booking in MongoDB
         const booking = new Booking({ seatNumber, user });
         await booking.save();
 
         res.status(200).json({
-            message: "Seat booked successfully!",
+            message: "Seat booked successfully",
             booking
         });
 
@@ -93,7 +96,6 @@ app.post("/book", async (req, res) => {
 
 /* ---------- Server ---------- */
 
-// Render automatically PORT assign karta hai
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
