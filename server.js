@@ -5,11 +5,16 @@ const { createClient } = require("redis");
 const app = express();
 app.use(express.json());
 
-/* ---------- MongoDB Atlas Connection ---------- */
+/* ---------- MongoDB Connection ---------- */
 
-mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB Atlas Connected"))
-.catch(err => console.log("MongoDB Error:", err));
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log("MongoDB Connected"))
+.catch((err) => console.log("MongoDB Error:", err));
+
+/* ---------- Booking Schema ---------- */
 
 const bookingSchema = new mongoose.Schema({
     seatNumber: {
@@ -28,7 +33,7 @@ const bookingSchema = new mongoose.Schema({
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
-/* ---------- Redis Cloud Connection ---------- */
+/* ---------- Redis Connection ---------- */
 
 const redisClient = createClient({
     url: process.env.REDIS_URL
@@ -36,29 +41,28 @@ const redisClient = createClient({
 
 redisClient.on("error", (err) => console.log("Redis Error:", err));
 
-(async () => {
-    try {
-        await redisClient.connect();
-        console.log("Redis Cloud Connected");
-    } catch (err) {
-        console.log("Redis Connection Error:", err);
-    }
-})();
+async function connectRedis() {
+    await redisClient.connect();
+    console.log("Redis Connected");
+}
 
-/* ---------- Home Route (Fix for Cannot GET /) ---------- */
+connectRedis();
+
+/* ---------- Test Route ---------- */
 
 app.get("/", (req, res) => {
-    res.send("Concurrent Ticket Booking System API is running");
+    res.send("Ticket Booking System Running");
 });
 
 /* ---------- Booking API ---------- */
 
 app.post("/book", async (req, res) => {
+
     const { seatNumber, user } = req.body;
 
     if (!seatNumber || !user) {
         return res.status(400).json({
-            message: "seatNumber and user are required"
+            message: "seatNumber and user required"
         });
     }
 
@@ -73,25 +77,32 @@ app.post("/book", async (req, res) => {
             }
         );
 
-        if (lock === null) {
+        if (!lock) {
             return res.status(400).json({
-                message: "Seat already booked or locked"
+                message: "Seat already booked"
             });
         }
 
-        const booking = new Booking({ seatNumber, user });
+        const booking = new Booking({
+            seatNumber,
+            user
+        });
+
         await booking.save();
 
-        res.status(200).json({
+        res.json({
             message: "Seat booked successfully",
             booking
         });
 
     } catch (err) {
+
         res.status(500).json({
             error: err.message
         });
+
     }
+
 });
 
 /* ---------- Server ---------- */
