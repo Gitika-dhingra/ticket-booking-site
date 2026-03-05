@@ -5,10 +5,11 @@ const { createClient } = require("redis");
 const app = express();
 app.use(express.json());
 
-/* ---------- MongoDB ---------- */
+/* ---------- MongoDB Atlas Connection ---------- */
 
-mongoose.connect("mongodb://127.0.0.1:27017/ticketDB")
-.then(() => console.log("MongoDB Connected"))
+// Yahan local link ki jagah process.env.MONGO_URI use kiya hai
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("MongoDB Atlas Connected! ✅"))
 .catch(err => console.log("MongoDB Error:", err));
 
 const bookingSchema = new mongoose.Schema({
@@ -28,10 +29,11 @@ const bookingSchema = new mongoose.Schema({
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
-/* ---------- Redis ---------- */
+/* ---------- Redis Cloud Connection ---------- */
 
+// Yahan local link ki jagah process.env.REDIS_URL use kiya hai
 const redisClient = createClient({
-    url: "redis://127.0.0.1:6379"
+    url: process.env.REDIS_URL
 });
 
 redisClient.on("error", (err) => console.log("Redis Error:", err));
@@ -39,7 +41,7 @@ redisClient.on("error", (err) => console.log("Redis Error:", err));
 (async () => {
     try {
         await redisClient.connect();
-        console.log("Redis Connected");
+        console.log("Redis Cloud Connected! ✅");
     } catch (err) {
         console.log("Redis Connection Error:", err);
     }
@@ -69,7 +71,7 @@ app.post("/book", async (req, res) => {
 
         if (lock === null) {
             return res.status(400).json({
-                message: "Seat already booked"
+                message: "Seat already booked or locked"
             });
         }
 
@@ -78,7 +80,7 @@ app.post("/book", async (req, res) => {
         await booking.save();
 
         res.status(200).json({
-            message: "Seat booked successfully",
+            message: "Seat booked successfully!",
             booking
         });
 
@@ -91,6 +93,7 @@ app.post("/book", async (req, res) => {
 
 /* ---------- Server ---------- */
 
+// Render automatically PORT assign karta hai
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
